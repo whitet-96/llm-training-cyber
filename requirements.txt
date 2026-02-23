@@ -1,0 +1,6 @@
+requests
+datasets
+pandas
+pyarrow
+python-dateutil
+pytest
