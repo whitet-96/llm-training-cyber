@@ -758,7 +758,7 @@ def generate_report(
 
 <div class="sticky-nav">
   <span class="nav-title">Cybersecurity Training Data &mdash; Curation Report</span>
-  <span class="nav-meta">Pipeline {PIPELINE_VERSION} &nbsp;&bull;&nbsp; {generated_at}</span>
+  <span class="nav-meta">Tom White &nbsp;&bull;&nbsp; Pipeline {PIPELINE_VERSION} &nbsp;&bull;&nbsp; {generated_at}</span>
 </div>
 
 <div class="content-wrapper">
@@ -766,7 +766,7 @@ def generate_report(
   <!-- Page header -->
   <div class="header">
     <h1>Cybersecurity Training Data &mdash; Curation Report</h1>
-    <div class="subtitle">Pipeline {PIPELINE_VERSION} &nbsp;&bull;&nbsp; Generated {generated_at}</div>
+    <div class="subtitle">Prepared by Tom White &nbsp;&bull;&nbsp; Pipeline {PIPELINE_VERSION} &nbsp;&bull;&nbsp; Generated {generated_at}</div>
     <div class="stats-bar">
       <div class="stat-card">
         <div class="value">{st['total']:,}</div>
