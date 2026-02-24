@@ -17,7 +17,7 @@ NVD_RESULTS_PER_PAGE = 100
 NVD_MAX_RECORDS = 500
 
 # HuggingFace dataset
-HF_DATASET = "mrm8488/cve-hf"  # fallback if primary unavailable
+HF_DATASET = "stasvinokur/cve-and-cwe-dataset-1999-2025"  # 280k CVEs, CC0-1.0, covers 1999-2025
 
 # Output paths
 RAW_PATH = "data/raw/cves_raw.jsonl"

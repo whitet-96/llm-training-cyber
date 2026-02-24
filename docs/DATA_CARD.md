@@ -22,7 +22,7 @@ The dataset is intended to support training and fine-tuning of language models i
 | Source | Dataset | License | Authority |
 |---|---|---|---|
 | NVD CVE 2.0 API | `https://services.nvd.nist.gov/rest/json/cves/2.0` | Public Domain (US Government) | Authoritative — NIST/US Federal |
-| HuggingFace | `mrm8488/cve-hf` | MIT | Secondary aggregator — mirrors NVD |
+| HuggingFace | `stasvinokur/cve-and-cwe-dataset-1999-2025` | CC0-1.0 (Public Domain) | Secondary — 280k CVEs 1999–2025, CVSS V2/V3/V4 + CWE |
 
 NVD records take precedence in deduplication. When a CVE appears in both sources, the NVD version is retained.
 

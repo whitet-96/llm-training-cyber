@@ -114,10 +114,11 @@ def fetch_nvd_cves(max_records: int = NVD_MAX_RECORDS) -> list:
 
 
 def fetch_hf_cves(max_records: int = 200, existing_ids: set = None) -> list:
-    """Load CVE records from the HuggingFace mrm8488/cve-hf dataset.
+    """Load CVE records from the HuggingFace stasvinokur/cve-and-cwe-dataset-1999-2025 dataset.
 
-    Normalises field names to match the NVD schema and deduplicates against
-    existing_ids (NVD takes precedence).
+    Schema: CVE-ID, DESCRIPTION, CVSS-V4, CVSS-V3, CVSS-V2, SEVERITY, CWE-ID
+    License: CC0-1.0 (public domain). 280k records covering 1999-2025.
+    Deduplicates against existing_ids (NVD takes precedence).
     """
     if existing_ids is None:
         existing_ids = set()
@@ -132,49 +133,49 @@ def fetch_hf_cves(max_records: int = 200, existing_ids: set = None) -> list:
     records = []
 
     try:
-        dataset = load_dataset(HF_DATASET, split="train", streaming=True, trust_remote_code=True)
+        dataset = load_dataset(HF_DATASET, split="train", streaming=True)
         for raw in dataset:
             if len(records) >= max_records:
                 break
 
-            # Normalise field names to match NVD schema
-            cve_id = (
-                raw.get("cve_id")
-                or raw.get("CVE_ID")
-                or raw.get("id")
-                or raw.get("Name")
-                or ""
-            )
+            cve_id = raw.get("CVE-ID", "")
             if not cve_id or cve_id in existing_ids:
                 continue
 
-            description = (
-                raw.get("description")
-                or raw.get("Description")
-                or raw.get("desc")
-                or ""
-            )
-            published = (
-                raw.get("published")
-                or raw.get("Published")
-                or raw.get("publish_date")
-                or ""
-            )
-            severity = (
-                raw.get("severity")
-                or raw.get("Severity")
-                or raw.get("cvss_severity")
-                or None
-            )
+            # Prefer CVSS-V3, fall back to V4 then V2
+            cvss_score = raw.get("CVSS-V3") or raw.get("CVSS-V4") or raw.get("CVSS-V2")
+            if cvss_score is not None:
+                try:
+                    cvss_score = float(cvss_score)
+                except (ValueError, TypeError):
+                    cvss_score = None
+
+            severity = raw.get("SEVERITY") or None
+            if severity:
+                severity = str(severity).upper()
+
+            cwe_raw = raw.get("CWE-ID", "")
+            # Exclude NVD catch-all placeholders; wrap single value in list
+            if cwe_raw and cwe_raw not in ("NVD-CWE-Other", "NVD-CWE-noinfo"):
+                cwe_ids = [cwe_raw]
+            else:
+                cwe_ids = []
+
+            # Derive approximate published year from CVE-ID (e.g. CVE-2023-12345 → "2023")
+            published = ""
+            if cve_id.startswith("CVE-"):
+                parts = cve_id.split("-")
+                if len(parts) >= 2 and parts[1].isdigit():
+                    published = parts[1]
 
             record = {
                 "cve_id": cve_id,
-                "description": str(description),
-                "published": str(published) if published else "",
+                "description": str(raw.get("DESCRIPTION", "")),
+                "published": published,
                 "last_modified": "",
-                "cvss_score": None,
-                "severity": str(severity).upper() if severity else None,
-                "cwe_ids": [],
+                "cvss_score": cvss_score,
+                "severity": severity,
+                "cwe_ids": cwe_ids,
                 "source": "huggingface",
             }
             records.append(record)
