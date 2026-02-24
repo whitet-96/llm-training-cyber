@@ -315,9 +315,8 @@ def _heatmap(records: list) -> str:
         zmax=1,
         hovertemplate="CVE: %{y}<br>%{x}: %{z:.3f}<extra></extra>",
         colorbar=dict(
-            title="Score",
+            title=dict(text="Score", font=dict(color="#cbd5e1")),
             tickfont=dict(color="#cbd5e1"),
-            titlefont=dict(color="#cbd5e1"),
         ),
     ))
     fig.update_layout(
