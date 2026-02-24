@@ -27,6 +27,16 @@ HuggingFace  →              →  Completeness (25%) →  Stratified     →  r
 
 ---
 
+## Sample Report
+
+A pre-generated report is included in the repository. Download and open it locally to see the pipeline output before running anything:
+
+> **[Download sample_report.html](https://raw.githubusercontent.com/whitet-96/llm-training-cyber/main/docs/sample_report.html)** — right-click → Save As, then open in any browser.
+
+The report covers 400 CVE records (200 NVD + 200 HuggingFace) and includes training readiness breakdown, composite score distribution, dimension box plots, severity distribution, top-20 records table, and a per-record dimension heatmap.
+
+---
+
 ## Quick Start
 
 ```bash
