@@ -19,10 +19,10 @@ Cybersecurity data presents unique challenges compared to general code data:
 ## Pipeline Architecture
 
 ```
-NVD API      →    Deduplication   →    Relevance (35%)      →    JSONL
-HuggingFace  →    Schema Norm.    →    Completeness (25%)   →    Data Card
-                                       Source Cred. (25%)
-                                       Clarity (15%)
+NVD API      →  Dedup/Norm  →  Relevance (35%)   →  Tiered Filter  →  training_final.jsonl
+HuggingFace  →              →  Completeness (25%) →  Stratified     →  review_queue.jsonl
+                            →  Source Cred. (25%) →  Sample         →  HTML Report
+                            →  Clarity (15%)      →  Decontaminate
 ```
 
 ---
@@ -36,11 +36,13 @@ pip install -r requirements.txt
 python main.py --stage all --max-records 500
 ```
 
-To run only ingestion or scoring independently:
+Run individual stages:
 
 ```bash
 python main.py --stage ingest --max-records 100
-python main.py --stage score --output data/scored/custom_output.jsonl
+python main.py --stage score
+python main.py --stage filter
+python main.py --stage report
 ```
 
 ---
@@ -55,13 +57,20 @@ cyb-dq-curation/
 │   └── ingest.py            # NVD API + HuggingFace ingestion
 ├── scoring/
 │   └── score.py             # Domain-specific quality scoring
+├── filtering/
+│   └── filter.py            # Tiered filter, stratified sampling, decontamination
+├── reporting/
+│   └── report.py            # Standalone HTML report generator
 ├── docs/
-│   └── DATA_CARD.md         # Dataset documentation
+│   ├── DATA_CARD.md         # Dataset documentation
+│   └── sample_report.html   # Sample pipeline report (generated output)
 ├── data/
 │   ├── raw/                 # Raw ingested data (gitignored)
-│   └── scored/              # Final scored JSONL output (gitignored)
+│   ├── scored/              # Scored JSONL output (gitignored)
+│   └── filtered/            # Filter stage outputs (gitignored)
 ├── tests/
-│   └── test_scoring.py      # pytest unit tests for scoring logic
+│   ├── test_scoring.py      # pytest unit tests for scoring logic
+│   └── test_filtering.py    # pytest unit tests for filter pipeline
 ├── .gitignore
 ├── requirements.txt
 └── README.md
@@ -81,6 +90,18 @@ cyb-dq-curation/
 **Quality threshold: 0.60** (vs. 0.70 in the companion coding pipeline)
 
 The lower threshold is intentional: cybersecurity descriptions are structurally sparser than well-documented code. NVD descriptions are authoritative but often terse — penalising them for brevity would discard high-signal records. The threshold is calibrated to retain verified, CVSS-scored records while rejecting placeholder entries and empty stubs.
+
+---
+
+## From Scored Data to Training-Ready
+
+The scored JSONL is not training data directly — it is curated source material. Each record in `cves_scored.jsonl` carries quality scores and a `training_ready` flag, but it still describes a CVE in raw form. Downstream formatting converts these records into training examples: instruction-following pairs ("Explain CVE-2023-44487"), preference pairs for RLHF, or classification examples for severity prediction. The curation pipeline deliberately stops at the source material boundary so it remains format-agnostic and reusable across different training objectives.
+
+Tiered filtering separates training-ready records from a human review queue, avoiding the false economy of a single binary threshold. A composite score of 0.58 is not categorically different from 0.62, yet a hard cutoff treats them as opposite outcomes. The review queue surfaces borderline records for human annotation rather than silently discarding them — which matters in a domain where manually reviewing one hundred CVEs produces meaningfully better coverage than relying entirely on automated scoring.
+
+Stratified sampling corrects for NVD's severity skew before training data is assembled. Roughly 40–50% of NVD records carry MEDIUM severity. Without correction, a model trained on unsampled data develops a skewed understanding of the vulnerability landscape: it handles MEDIUM cases well but underperforms on CRITICAL and LOW, which is exactly wrong for a security assistant. Sampling up to a fixed quota per severity tier ensures the training subset represents the full spectrum of vulnerability types.
+
+Decontamination isolates post-cutoff records so they can be used for fine-tuning evaluation without polluting pre-training data. CVEs published after a model's knowledge cutoff are potential overlap with security benchmarks and red-team evaluation sets that use recent vulnerabilities as held-out test cases. Rather than silently including or excluding these records, the pipeline flags and isolates them in `flagged_contamination.jsonl`, giving downstream practitioners the information they need to make an informed decision.
 
 ---
 
@@ -110,7 +131,7 @@ The lower threshold is intentional: cybersecurity descriptions are structurally 
 
 ## Ethical Considerations
 
-- All data is sourced from public, authoritative databases (NVD/NIST — public domain; HuggingFace mirror — MIT licensed)
+- All data is sourced from public, authoritative databases (NVD/NIST — public domain; HuggingFace mirror — CC0-1.0)
 - No exploit code or PoC payloads are ingested — descriptions only
 - Intended for training models to **understand and explain** vulnerabilities, not to facilitate attacks
 - See [docs/DATA_CARD.md](docs/DATA_CARD.md) for full intended use statement

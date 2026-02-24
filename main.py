@@ -41,7 +41,7 @@ def print_summary(scored: list, output_path: str) -> None:
         return sum(vals) / len(vals) if vals else 0.0
 
     print("\n" + "=" * 60)
-    print("  PIPELINE SUMMARY")
+    print("  SCORE STAGE SUMMARY")
     print("=" * 60)
     print(f"  Total records scored  : {total}")
     print(f"  Training-ready records: {pass_count} ({pass_pct:.1f}%)")
@@ -54,13 +54,28 @@ def print_summary(scored: list, output_path: str) -> None:
     print("=" * 60 + "\n")
 
 
+def print_filter_summary(summary: dict) -> None:
+    print("\n" + "=" * 60)
+    print("  FILTER STAGE SUMMARY")
+    print("=" * 60)
+    print(f"  Total input           : {summary['total_input']}")
+    print(f"  Hard excluded         : {summary['hard_excluded']}")
+    print(f"  Training ready (raw)  : {summary['training_ready_raw']}")
+    print(f"  Review queue          : {summary['review_queue']}")
+    print(f"  Tier rejected         : {summary['tier_rejected']}")
+    print(f"  After stratified sample: {summary['sampled']}")
+    print(f"  Training final (clean): {summary['training_final']}")
+    print(f"  Flagged contamination : {summary['flagged_contamination']}")
+    print("=" * 60 + "\n")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Cybersecurity Dataset Curation Pipeline"
     )
     parser.add_argument(
         "--stage",
-        choices=["ingest", "score", "all"],
+        choices=["ingest", "score", "filter", "report", "all"],
         default="all",
         help="Pipeline stage to run (default: all)",
     )
@@ -82,9 +97,10 @@ def main():
     if args.stage in ("ingest", "all"):
         print(f"[Pipeline] Stage: ingest (max_records={args.max_records})")
         ingest(max_records=args.max_records)
+        print()
 
     if args.stage in ("score", "all"):
-        print(f"[Pipeline] Stage: score")
+        print("[Pipeline] Stage: score")
         if not os.path.exists(RAW_PATH):
             print(f"[Pipeline] ERROR: Raw data not found at '{RAW_PATH}'. Run --stage ingest first.")
             sys.exit(1)
@@ -97,6 +113,26 @@ def main():
         print(f"[Pipeline] Scored JSONL saved to: {args.output}")
 
         print_summary(scored, args.output)
+
+    if args.stage in ("filter", "all"):
+        print("[Pipeline] Stage: filter")
+        if not os.path.exists(args.output):
+            print(f"[Pipeline] ERROR: Scored data not found at '{args.output}'. Run --stage score first.")
+            sys.exit(1)
+
+        from filtering.filter import run_filter_pipeline
+        filter_summary = run_filter_pipeline(scored_path=args.output)
+        print_filter_summary(filter_summary)
+
+    if args.stage in ("report", "all"):
+        print("[Pipeline] Stage: report")
+        if not os.path.exists(args.output):
+            print(f"[Pipeline] ERROR: Scored data not found at '{args.output}'. Run --stage score first.")
+            sys.exit(1)
+
+        from reporting.report import generate_report
+        generate_report(scored_path=args.output)
+        print()
 
 
 if __name__ == "__main__":
