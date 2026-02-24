@@ -3,4 +3,5 @@ datasets
 pandas
 pyarrow
 python-dateutil
+plotly
 pytest
