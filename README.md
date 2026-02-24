@@ -4,6 +4,8 @@ A domain-specific curation pipeline for cybersecurity training data, ingesting C
 
 > **Part of a two-project portfolio demonstrating LLM training data operations across coding and cybersecurity domains. See also: [LLM Data Quality Scoring Pipeline](https://github.com/whitet-96/llm-dq-scoring)**
 
+![Curation Report Preview](docs/report_screenshot.png)
+
 ---
 
 ## Why This Project
